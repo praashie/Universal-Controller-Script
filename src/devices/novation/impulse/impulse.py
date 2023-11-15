@@ -14,11 +14,18 @@ from typing import Optional
 
 from devices import Device
 
-from control_surfaces.event_patterns import BasicPattern
+from control_surfaces.event_patterns import BasicPattern, NotePattern
 from common.logger import log
 from common.extension_manager import ExtensionManager
-from control_surfaces.matchers import BasicControlMatcher, NoteMatcher
+from control_surfaces.matchers import (
+    BasicControlMatcher,
+    IndexedMatcher,
+    NoteMatcher,
+)
+from control_surfaces.value_strategies import NoteStrategy
 from control_surfaces import (
+    ChannelAfterTouch,
+    DrumPad,
     NullControl,
     StandardModWheel,
     StandardPitchWheel,
@@ -44,11 +51,14 @@ class Impulse49_61(Device):
 
     def __init__(self):
         self.matcher = BasicControlMatcher()
-        self.matcher.addSubMatcher(NoteMatcher())
-        self.matcher.addControl(StandardModWheel())
-        self.matcher.addControl(StandardPitchWheel())
 
-        # Ignore the response from initialization
+        self._registerDrumpads(self.matcher)
+        self.matcher.addSubMatcher(NoteMatcher())
+        self.matcher.addControl(StandardModWheel.create())
+        self.matcher.addControl(StandardPitchWheel.create())
+        self.matcher.addControl(ChannelAfterTouch.fromChannel([0, 15]))
+
+        # Soft-ignore the response from initialization
         self.matcher.addControl(NullControl(
             BasicPattern([
                 0xF0, 0x00, 0x20, 0x29, 0x67, 0x07, 0x3D
@@ -82,7 +92,7 @@ class Impulse49_61(Device):
 
     @classmethod
     def getDrumPadSize(cls):
-        return 4, 2
+        return 2, 4
 
     @staticmethod
     def getUniversalEnquiryResponsePattern():
@@ -93,6 +103,25 @@ class Impulse49_61(Device):
                 0x00, 0x1B,             # Device Family
                 0x00, 0x1B,             # Device Model
             ]
+        )
+
+    @classmethod
+    def _registerDrumpads(cls, matcher: BasicControlMatcher):
+        # TODO: Documentation: Drum pads must be assigned to MIDI channel 16!
+        # Default note layout starts from bottom left, C3 (60)
+
+        drum_notes = [60, 62, 64, 65, 67, 69, 71, 72]
+        for i, note in enumerate(drum_notes):
+            coordinate = (1 - (i // 4), i % 4)
+            pad = cls._makeDrumpadControl(note, coordinate)
+            matcher.addControl(pad)
+
+    @classmethod
+    def _makeDrumpadControl(cls, note: int, coordinate: tuple[int, int]) -> DrumPad:
+        return DrumPad(
+            NotePattern(note, 15),
+            NoteStrategy(),
+            coordinate
         )
 
 
