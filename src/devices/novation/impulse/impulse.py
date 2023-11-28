@@ -14,6 +14,7 @@ from typing import Optional
 
 from devices import Device
 
+from consts import getVersionString as getUcsVersionString
 from control_surfaces.event_patterns import BasicPattern, NotePattern
 from common.logger import log
 from common.extension_manager import ExtensionManager
@@ -22,11 +23,18 @@ from control_surfaces.matchers import (
     IndexedMatcher,
     NoteMatcher,
 )
-from control_surfaces.value_strategies import NoteStrategy
+from control_surfaces.value_strategies import Data2Strategy, NoteStrategy
 from control_surfaces import (
     ChannelAfterTouch,
+    ControlSurface,
     DrumPad,
+    Fader,
+    MasterFader,
+    MasterGenericFaderButton,
+    ModWheel,
+    MuteButton,
     NullControl,
+    GenericFaderButton,
     StandardModWheel,
     StandardPitchWheel,
     SustainPedal,
@@ -34,15 +42,10 @@ from control_surfaces import (
 
 import device
 from fl_classes import FlMidiMsg
+import ui
 
-
-
-h = bytes.fromhex
-
-SYX_IMPULSE_HEADER = h("F0 00 20 29 67")
-SYX_MSG_INIT = SYX_IMPULSE_HEADER + h("06 01 01 01")
-SYX_MSG_DEINIT = SYX_IMPULSE_HEADER + h("06 00 00 00")
-
+from . import controls
+from .sysex import SYX_IMPULSE_HEADER, SYX_MSG_DEINIT, SYX_MSG_INIT
 
 class Impulse49_61(Device):
     """
@@ -52,10 +55,18 @@ class Impulse49_61(Device):
     def __init__(self):
         self.matcher = BasicControlMatcher()
 
-        self._registerDrumpads(self.matcher)
+        controls.registerImpulseControls(self.matcher)
+
         self.matcher.addSubMatcher(NoteMatcher())
-        self.matcher.addControl(StandardModWheel.create())
+
+        # In the advanced control mode, the modwheel is set to
+        # channel 3 to avoid conflicts
+        self.matcher.addControl(ModWheel(
+            BasicPattern(0xB2, 0x1, ...),
+            Data2Strategy(),
+        ))
         self.matcher.addControl(StandardPitchWheel.create())
+        self.matcher.addControl(SustainPedal.create())
         self.matcher.addControl(ChannelAfterTouch.fromChannel([0, 15]))
 
         # Soft-ignore the response from initialization
@@ -76,6 +87,9 @@ class Impulse49_61(Device):
     def initialize(self):
         self.deinitialize()
         device.midiOutSysex(SYX_MSG_INIT)
+
+        controls.setLcdText(f"What the fuck did you just say about me, you little bitch? I'll have you know, I have a black belt in karate") # {getUcsVersionString()}, {ui.getVersion()}")
+        controls.setLcdTinyText("LoL")
         log('device.impulse.init', 'Initialization message sent.')
 
     def deinitialize(self):
@@ -103,25 +117,6 @@ class Impulse49_61(Device):
                 0x00, 0x1B,             # Device Family
                 0x00, 0x1B,             # Device Model
             ]
-        )
-
-    @classmethod
-    def _registerDrumpads(cls, matcher: BasicControlMatcher):
-        # TODO: Documentation: Drum pads must be assigned to MIDI channel 16!
-        # Default note layout starts from bottom left, C3 (60)
-
-        drum_notes = [60, 62, 64, 65, 67, 69, 71, 72]
-        for i, note in enumerate(drum_notes):
-            coordinate = (1 - (i // 4), i % 4)
-            pad = cls._makeDrumpadControl(note, coordinate)
-            matcher.addControl(pad)
-
-    @classmethod
-    def _makeDrumpadControl(cls, note: int, coordinate: tuple[int, int]) -> DrumPad:
-        return DrumPad(
-            NotePattern(note, 15),
-            NoteStrategy(),
-            coordinate
         )
 
 
