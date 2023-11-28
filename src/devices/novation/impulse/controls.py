@@ -14,6 +14,7 @@ from control_surfaces.controls import (
     ControlSurface,
     DrumPad,
     Fader,
+    Encoder,
     GenericFaderButton,
     MasterFader,
     MasterGenericFaderButton,
@@ -25,12 +26,13 @@ from control_surfaces.value_strategies import (
 )
 from control_surfaces.managers import IValueManager
 
-from .util import ImpulseAnnotationValueManager
+from .util import ImpulseAnnotationValueManager, ImpulseEncoderValueStrategy, ImpulseFaderButtonManager
 
 
 def registerImpulseControls(matcher: BasicControlMatcher):
     registerDrumpads(matcher)
     registerMixerControls(matcher)
+    registerEncoders(matcher)
 
 
 def registerDrumpads(matcher: BasicControlMatcher):
@@ -71,6 +73,16 @@ def registerMixerControls(matcher: BasicControlMatcher):
     matcher.addControl(ImpulseFaderButton(MasterGenericFaderButton, 8))
 
 
+def registerEncoders(matcher: BasicControlMatcher):
+    for i in range(8):
+        encoder = ImpulseEncoder(
+            control_class=Encoder,
+            index=i,
+            coordinate=(i // 4, i % 4)
+        )
+        matcher.addControl(encoder)
+
+
 def impulse_button_isPress(value: float):
     return value != 0.0
 
@@ -81,7 +93,7 @@ def ImpulseFaderButton(
 ) -> ControlSurface:
 
     cc = 0x9 + track_index
-    manager = ImpulseAnnotationValueManager(
+    manager = ImpulseFaderButtonManager(
         channel=0, cc=cc, annotation_group=1, annotation_slot=track_index)
 
     button = control_class(
@@ -89,7 +101,8 @@ def ImpulseFaderButton(
         value_strategy=Data2Strategy(),
         coordinate=coordinate,
         value_manager=manager,
-        annotation_manager=manager
+        annotation_manager=manager,
+        color_manager=manager
     )
 
     button.isPress = impulse_button_isPress
@@ -110,4 +123,22 @@ def ImpulseFader(
         coordinate=coordinate,
         value_manager=manager,
         annotation_manager=manager
+    )
+
+
+def ImpulseEncoder(
+    control_class: type[ControlSurface], index: int,
+    coordinate: tuple[int, int] = (0, 0)
+) -> ControlSurface:
+
+    manager = ImpulseAnnotationValueManager(
+        channel=1, cc=index, annotation_group=2, annotation_slot=index
+    )
+
+    return control_class(
+        event_pattern=BasicPattern(0xB1, index, ...),
+        coordinate=coordinate,
+        value_strategy=ImpulseEncoderValueStrategy(),
+        annotation_manager=manager,
+        value_manager=manager
     )

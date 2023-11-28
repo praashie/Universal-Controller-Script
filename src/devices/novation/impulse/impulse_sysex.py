@@ -40,5 +40,8 @@ def setControlAnnotationText(group: int, slot: int, msg: str):
     """
     # This appears to be internally implemented as a simple text buffer.
 
-    msg_bytes = msg[:8].encode(errors='ignore')
-    device.midiOutSysex(SYX_CONTROL_ANNOTATION + bytes([group, slot * 9, 0]) + msg_bytes + bytes([0]))
+    if msg:
+        msg_bytes = msg[:8].encode(errors='ignore')
+        device.midiOutSysex(SYX_CONTROL_ANNOTATION + bytes([group, slot * 9, 0]) + msg_bytes + bytes([0]))
+    else:
+        device.midiOutSysex(SYX_CONTROL_ANNOTATION + bytes([group, slot * 9, 0]))
