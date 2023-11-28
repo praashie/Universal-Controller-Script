@@ -25,19 +25,7 @@ from control_surfaces.value_strategies import (
 )
 from control_surfaces.managers import IValueManager
 
-from .sysex import SYX_MSG_TEXT, SYX_MSG_TEXT2
-
-import device
-
-
-def setLcdText(msg: str):
-    text_bytes = msg.encode("ascii", errors="ignore")
-    device.midiOutSysex(SYX_MSG_TEXT + text_bytes)
-
-
-def setLcdTinyText(msg: str):
-    text_bytes = msg.encode("ascii", errors="ignore")
-    device.midiOutSysex(SYX_MSG_TEXT2 + text_bytes)
+from .util import ImpulseAnnotationValueManager
 
 
 def registerImpulseControls(matcher: BasicControlMatcher):
@@ -79,23 +67,8 @@ def registerMixerControls(matcher: BasicControlMatcher):
         matcher.addControl(fader)
         matcher.addControl(button)
 
-
     matcher.addControl(ImpulseFader(MasterFader, 8))
     matcher.addControl(ImpulseFaderButton(MasterGenericFaderButton, 8))
-
-
-class MidiCCValueManager(IValueManager):
-    def __init__(self, channel: int, cc: int):
-        self.channel = channel
-        self.cc = cc
-
-    def onValueChange(self, new_value: float) -> None:
-        value_byte = round(max(0, min(255, 255 * new_value)))
-        device.midiOutMsg((0xB0 + self.channel) + (self.cc << 8) + (value_byte << 16))
-
-    def tick(self) -> None:
-        # Used for basic control feedback - the Impulse is expected to memorize these.
-        pass
 
 
 def impulse_button_isPress(value: float):
@@ -106,12 +79,17 @@ def ImpulseFaderButton(
     control_class: type[ControlSurface], track_index: int,
     coordinate: tuple[int, int] = (0, 0)
 ) -> ControlSurface:
+
     cc = 0x9 + track_index
+    manager = ImpulseAnnotationValueManager(
+        channel=0, cc=cc, annotation_group=1, annotation_slot=track_index)
+
     button = control_class(
         event_pattern=BasicPattern(0xB0, cc, ...),
         value_strategy=Data2Strategy(),
         coordinate=coordinate,
-        value_manager=MidiCCValueManager(channel=0, cc=cc)
+        value_manager=manager,
+        annotation_manager=manager
     )
 
     button.isPress = impulse_button_isPress
@@ -122,9 +100,14 @@ def ImpulseFader(
     control_class: type[ControlSurface], track_index: int,
     coordinate: tuple[int, int] = (0, 0)
 ) -> ControlSurface:
+
+    manager = ImpulseAnnotationValueManager(
+        channel=0, cc=track_index, annotation_group=0, annotation_slot=track_index)
+
     return control_class(
         event_pattern=BasicPattern(0xB0, track_index, ...),
         value_strategy=Data2Strategy(),
         coordinate=coordinate,
-        value_manager=MidiCCValueManager(channel=0, cc=track_index)
+        value_manager=manager,
+        annotation_manager=manager
     )

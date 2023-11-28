@@ -97,6 +97,7 @@ AUTHORS: dict[str, list[str]] = {
     "Plugin Contributors": [
     ],
     "Device Contributors": [
+        "Praash"
     ]
 }
 

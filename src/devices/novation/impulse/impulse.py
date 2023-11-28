@@ -45,7 +45,7 @@ from fl_classes import FlMidiMsg
 import ui
 
 from . import controls
-from .sysex import SYX_IMPULSE_HEADER, SYX_MSG_DEINIT, SYX_MSG_INIT
+from . import impulse_sysex
 
 class Impulse49_61(Device):
     """
@@ -66,13 +66,13 @@ class Impulse49_61(Device):
             Data2Strategy(),
         ))
         self.matcher.addControl(StandardPitchWheel.create())
-        self.matcher.addControl(SustainPedal.create())
+        self.matcher.addControl(SustainPedal.create(channel=2))
         self.matcher.addControl(ChannelAfterTouch.fromChannel([0, 15]))
 
         # Soft-ignore the response from initialization
         self.matcher.addControl(NullControl(
             BasicPattern([
-                0xF0, 0x00, 0x20, 0x29, 0x67, 0x07, 0x3D
+                0xF0, 0x00, 0x20, 0x29, 0x67, 0x07, ...
             ])
         ))
 
@@ -86,14 +86,13 @@ class Impulse49_61(Device):
 
     def initialize(self):
         self.deinitialize()
-        device.midiOutSysex(SYX_MSG_INIT)
+        impulse_sysex.initialize()
 
-        controls.setLcdText(f"What the fuck did you just say about me, you little bitch? I'll have you know, I have a black belt in karate") # {getUcsVersionString()}, {ui.getVersion()}")
-        controls.setLcdTinyText("LoL")
+        impulse_sysex.setLcdText(f"Universal Controller Script {getUcsVersionString()}")
+        impulse_sysex.setLcdTinyText("UCS")
         log('device.impulse.init', 'Initialization message sent.')
 
     def deinitialize(self):
-        device.midiOutSysex(SYX_MSG_DEINIT)
         log('device.impulse.init', 'Deinitialization message sent.')
 
     @classmethod

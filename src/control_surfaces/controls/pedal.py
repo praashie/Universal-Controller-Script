@@ -52,9 +52,9 @@ class SustainPedal(Pedal):
     Represents a sustain pedal
     """
     @classmethod
-    def create(cls) -> 'SustainPedal':
+    def create(cls, channel=0) -> 'SustainPedal':
         return cls(
-            BasicPattern(0xB0, SUSTAIN, ...),
+            BasicPattern(0xB0 + channel, SUSTAIN, ...),
             ButtonData2Strategy(),
         )
 
@@ -64,9 +64,9 @@ class SostenutoPedal(Pedal):
     Represents a sostenuto pedal
     """
     @classmethod
-    def create(cls) -> 'SostenutoPedal':
+    def create(cls, channel=0) -> 'SostenutoPedal':
         return cls(
-            BasicPattern(0xB0, SOSTENUTO, ...),
+            BasicPattern(0xB0 + channel, SOSTENUTO, ...),
             ButtonData2Strategy(),
         )
 
@@ -76,8 +76,8 @@ class SoftPedal(Pedal):
     Represents a soft pedal
     """
     @classmethod
-    def create(cls) -> 'SoftPedal':
+    def create(cls, channel=0) -> 'SoftPedal':
         return cls(
-            BasicPattern(0xB0, SOFT, ...),
+            BasicPattern(0xB0 + channel, SOFT, ...),
             ButtonData2Strategy(),
         )
