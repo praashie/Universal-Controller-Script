@@ -9,7 +9,7 @@ from control_surfaces.value_strategies import IValueStrategy
 from . import impulse_sysex
 
 
-class ImpulseAnnotationValueManager(IValueManager):
+class ImpulseAnnotationValueManager(IValueManager, IAnnotationManager):
     """
     Provide feedback and LCD annotations for faders, fader buttons,
     and encoders.
@@ -41,6 +41,25 @@ class ImpulseFaderButtonManager(ImpulseAnnotationValueManager, IColorManager):
     def onColorChange(self, new_color: Color) -> None:
         value_byte = new_color.enabled
         device.midiOutMsg( (0xB0 + self.channel) + (self.cc << 8) + (value_byte << 16) )
+
+
+class ImpulseFakeAnnotationManager(IAnnotationManager, IValueManager):
+    """
+    Provide 'annotations' for controls by explicitly displaying a UCS annotation
+    whenever this control is moved.
+    """
+    def __init__(self):
+        self._annotation = ''
+
+    def onAnnotationChange(self, new_annotation: str):
+        self._annotation = new_annotation
+        print(f'New annotation: {new_annotation!r}')
+
+    def onValueChange(self, new_value: float):
+        impulse_sysex.setLcdText(self._annotation)
+
+    def tick(self):
+        pass
 
 
 class ImpulseEncoderValueStrategy(IValueStrategy):

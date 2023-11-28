@@ -18,6 +18,15 @@ from control_surfaces.controls import (
     GenericFaderButton,
     MasterFader,
     MasterGenericFaderButton,
+    RewindButton,
+    FastForwardButton,
+    StopButton,
+    PlayButton,
+    LoopButton,
+    RecordButton,
+    TransportButton,
+    DirectionNext,
+    DirectionPrevious
 )
 from control_surfaces.event_patterns import BasicPattern, NotePattern
 from control_surfaces.matchers import BasicControlMatcher
@@ -26,13 +35,14 @@ from control_surfaces.value_strategies import (
 )
 from control_surfaces.managers import IValueManager
 
-from .util import ImpulseAnnotationValueManager, ImpulseEncoderValueStrategy, ImpulseFaderButtonManager
+from .util import ImpulseAnnotationValueManager, ImpulseEncoderValueStrategy, ImpulseFaderButtonManager, ImpulseFakeAnnotationManager
 
 
 def registerImpulseControls(matcher: BasicControlMatcher):
     registerDrumpads(matcher)
     registerMixerControls(matcher)
     registerEncoders(matcher)
+    registerButtons(matcher)
 
 
 def registerDrumpads(matcher: BasicControlMatcher):
@@ -81,6 +91,28 @@ def registerEncoders(matcher: BasicControlMatcher):
             coordinate=(i // 4, i % 4)
         )
         matcher.addControl(encoder)
+
+
+def registerButtons(matcher: BasicControlMatcher):
+    controlTypes: list[tuple[ type[TransportButton], int ]] = [
+        (DirectionPrevious, 0x26),
+        (DirectionNext, 0x25),
+        (RewindButton, 0x1B),
+        (FastForwardButton, 0x1C),
+        (StopButton, 0x1D),
+        (PlayButton, 0x1E),
+        (LoopButton, 0x1F),
+        (RecordButton, 0x20)
+    ]
+
+    for cType, cc in controlTypes:
+        button = cType(
+            event_pattern=BasicPattern(0xB0, cc, ...),
+            value_strategy=Data2Strategy(),
+        )
+        button.isPress = impulse_button_isPress
+        matcher.addControl(button)
+
 
 
 def impulse_button_isPress(value: float):

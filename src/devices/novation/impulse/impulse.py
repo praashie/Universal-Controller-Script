@@ -66,7 +66,7 @@ class Impulse49_61(Device):
             Data2Strategy(),
         ))
         self.matcher.addControl(StandardPitchWheel.create())
-        self.matcher.addControl(SustainPedal.create(channel=2))
+        self.matcher.addControl(SustainPedal.create())
         self.matcher.addControl(ChannelAfterTouch.fromChannel([0, 15]))
 
         # Soft-ignore the response from initialization
