@@ -10,6 +10,7 @@ This code is licensed under the GPL v3 license. Refer to the LICENSE file for
 more details.
 """
 
+import fl_typing
 from typing import Optional
 
 from devices import Device
@@ -46,7 +47,7 @@ import ui
 
 from . import controls
 from . import impulse_sysex
-from .templates import ImpulseTemplateDumpMatcher, ImpulseTemplateData
+from . import templates
 
 
 class Impulse49_61(Device):
@@ -57,16 +58,18 @@ class Impulse49_61(Device):
     def __init__(self):
         self.matcher = BasicControlMatcher()
 
-        self.drum_pads = controls.makeDrumpads()
         self.faders, self.fader_buttons = controls.makeMixerControls()
         self.encoders = controls.makeEncoders()
         self.transport_buttons = controls.makeTransportButtons()
 
         for control_set in (
-            self.drum_pads, self.faders, self.fader_buttons,
+            self.faders, self.fader_buttons,
             self.encoders, self.transport_buttons
         ):
             self.matcher.addControls(control_set)
+
+        self.drum_pad_matcher = controls.ImpulseDrumpadMatcher()
+        self.matcher.addSubMatcher(self.drum_pad_matcher)
 
         self.matcher.addSubMatcher(NoteMatcher())
 
@@ -87,7 +90,7 @@ class Impulse49_61(Device):
             ])
         ))
 
-        self.matcher.addSubMatcher(ImpulseTemplateDumpMatcher(self.onTemplateDumped))
+        self.matcher.addSubMatcher(templates.ImpulseTemplateDumpMatcher(self.onTemplateDumped))
 
         super().__init__(self.matcher)
 
@@ -114,9 +117,25 @@ class Impulse49_61(Device):
         log('device.impulse.init', 'Deinitialization message sent.')
 
     def onTemplateDumped(self, sysex_data: bytes):
-        template = ImpulseTemplateData.parse(sysex_data)
+        template = templates.ImpulseTemplateData(sysex_data)
         log('device.impulse.template', 'Received template data:')
-        log('device.impulse.template', repr(template))
+        log('device.impulse.template', f'name: {template.name!r}')
+        log('device.impulse.template', 'drum_pads:')
+        for i, pad in enumerate(template.drum_pads):
+            log('device.impulse.template', f'    note: {pad.note}, channel: {pad.midi_channel_port}')
+
+            # Move each pad into its own unique channel (8-15)
+            pad.midi_channel_port = 8 + i
+
+        self.drum_pad_matcher.loadTemplatePads(template.drum_pads)
+
+        if not template.name.strip().endswith('*'):
+            template.name = template.name.strip()[:7] + '*'
+        # Apply the patched data to the current template
+        patched_data = template.apply_patch(sysex_data)
+
+        # Send the template back to Impulse
+        device.midiOutSysex(patched_data)
 
     @classmethod
     def create(

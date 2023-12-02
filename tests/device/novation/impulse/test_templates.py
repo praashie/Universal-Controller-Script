@@ -10,7 +10,6 @@ This code is licensed under the GPL v3 license. Refer to the LICENSE file for
 more details.
 """
 
-import dataclasses
 import pytest
 
 from devices.novation.impulse.templates import (
@@ -49,13 +48,13 @@ SAMPLE_DRUM_PADS: list[DrumPad] = [
 
 @pytest.fixture
 def result():
-    return ImpulseTemplateData.parse(SAMPLE_TEMPLATE)
+    return ImpulseTemplateData(SAMPLE_TEMPLATE)
 
 
 def test_invalid_prefix():
     data = bytes([0xF0, 0x00, 0x20, 0x29, 0x67, 0x07, 0x3D, 0xF7])
     with pytest.raises(AssertionError):
-        result = ImpulseTemplateData.parse(data)
+        result = ImpulseTemplateData(data)
 
 
 def test_template_basics(result: ImpulseTemplateData):
@@ -83,7 +82,7 @@ def test_template_drum_pads(result: ImpulseTemplateData):
 
 
 def test_template_apply_patch():
-    basic_template = ImpulseTemplateData.parse(FACTORY_TEMPLATE_BASIC)
+    basic_template = ImpulseTemplateData(FACTORY_TEMPLATE_BASIC)
 
     basic_template.name = 'UnitTest'
     basic_template.octave = 2
@@ -96,13 +95,13 @@ def test_template_apply_patch():
     ]
 
     basic_template.drum_pads = [
-        DrumPad(*dataclasses.astuple(pad))
+        DrumPad(*pad.dump())
         for pad in SAMPLE_DRUM_PADS
     ]
 
     basic_template.keyboard_zones = modified_zones
 
     patched_data = basic_template.apply_patch(FACTORY_TEMPLATE_BASIC)
-    parsed_template = ImpulseTemplateData.parse(patched_data)
+    parsed_template = ImpulseTemplateData(patched_data)
 
     assert parsed_template == basic_template

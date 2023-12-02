@@ -10,7 +10,10 @@ This code is licensed under the GPL v3 license. Refer to the LICENSE file for
 more details.
 """
 
-from control_surfaces.controls import (
+from typing import Optional, Sequence
+from fl_classes import FlMidiMsg
+from control_surfaces import (
+    ControlEvent,
     ControlSurface,
     DrumPad,
     Fader,
@@ -28,8 +31,9 @@ from control_surfaces.controls import (
     DirectionNext,
     DirectionPrevious
 )
+
 from control_surfaces.event_patterns import BasicPattern, NotePattern
-from control_surfaces.matchers import BasicControlMatcher
+from control_surfaces.matchers import IControlMatcher
 from control_surfaces.value_strategies import (
     Data2Strategy, NoteStrategy, TwosComplimentDeltaStrategy
 )
@@ -37,22 +41,54 @@ from control_surfaces.managers import IValueManager
 
 from .util import ImpulseAnnotationValueManager, ImpulseEncoderValueStrategy, ImpulseFaderButtonManager, ImpulseFakeAnnotationManager
 
+from .templates import DrumPad as TemplateDrumPad
+
+
+class ImpulseDrumPad(DrumPad):
+    ...
+
+
+class ImpulseDrumpadMatcher(IControlMatcher):
+    def __init__(self):
+        self._drum_pads: list[DrumPad] = makeDrumpads()
+
+    def loadTemplatePads(self, template_pads: list[TemplateDrumPad]):
+        for i, template_pad in enumerate(template_pads):
+            channel = template_pad.midi_channel_port & 0x0F
+            self._drum_pads[i]._ControlSurface__pattern = NotePattern(template_pad.note, channel)
+
+    def matchEvent(self, event: FlMidiMsg) -> Optional[ControlEvent]:
+        for pad in self._drum_pads:
+            if (m := pad.match(event)) is not None:
+                return m
+        return None
+
+    def getControls(self) -> Sequence[ControlSurface]:
+        return self._drum_pads
+
+    def tick(self, thorough: bool) -> None:
+        pass
+
 
 def makeDrumpads() -> list[DrumPad]:
-    # TODO: Documentation: Drum pads must be assigned to MIDI channel 16!
-    # Default note layout starts from bottom left, C3 (60)
+    """
+    Create a default set of drum pads. This assumes drum pads on channel 9 (10 on controllers)
 
-    drum_notes = [60, 62, 64, 65, 67, 69, 71, 72]
+    This won't work with some the default templates (such as "BascMIDI"),
+    because the drum pads are assigned to the same channel as the keyboard.
+    """
+
+    drum_notes = [45, 47, 50, 46, 36, 38, 40, 42]
     drum_pads = []
     for i, note in enumerate(drum_notes):
-        coordinate = (1 - (i // 4), i % 4)
-        drum_pads.append(makeDrumpadControl(note, coordinate))
+        coordinate = ((i // 4), i % 4)
+        drum_pads.append(makeDrumpadControl(note, 9, coordinate))
     return drum_pads
 
 
-def makeDrumpadControl(note: int, coordinate: tuple[int, int]) -> DrumPad:
+def makeDrumpadControl(note: int, channel: int, coordinate: tuple[int, int]) -> DrumPad:
     return DrumPad(
-        NotePattern(note, 15),
+        NotePattern(note, channel),
         NoteStrategy(),
         coordinate
     )
