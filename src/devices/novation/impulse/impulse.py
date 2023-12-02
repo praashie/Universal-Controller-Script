@@ -46,6 +46,8 @@ import ui
 
 from . import controls
 from . import impulse_sysex
+from .templates import ImpulseTemplateDumpMatcher
+
 
 class Impulse49_61(Device):
     """
@@ -76,17 +78,24 @@ class Impulse49_61(Device):
             ])
         ))
 
+        self.matcher.addSubMatcher(ImpulseTemplateDumpMatcher())
+
         super().__init__(self.matcher)
 
-    def getId(self) -> str:
+    @staticmethod
+    def getId():
         return "Novation.Impulse.49_61"
 
-    def getSupportedIds(self):
-        return "Novation.Impulse.49_61"
+    @staticmethod
+    def getSupportedIds():
+        return ("Novation.Impulse.49_61",)
 
     def initialize(self):
         self.deinitialize()
         impulse_sysex.initialize()
+
+        log('general', 'Triggering template dump...')
+        impulse_sysex.triggerTemplateDump()
 
         impulse_sysex.setLcdText(f"Universal Controller Script {getUcsVersionString()}")
         impulse_sysex.setLcdTinyText("UCS")
