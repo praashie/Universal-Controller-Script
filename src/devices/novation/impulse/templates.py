@@ -1,5 +1,5 @@
 from dataclasses import dataclass, astuple
-from typing import Optional as O, Sequence
+from typing import Callable, Optional as O, Sequence
 
 
 from control_surfaces.event_patterns import (
@@ -25,10 +25,11 @@ class ImpulseTemplateDumpMatcher(IControlMatcher):
     """
     Matches a SysEx template dump from Novation Impulse
     """
-    def __init__(self):
+    def __init__(self, template_callback: Callable[[bytes], None]):
         super().__init__()
 
         self._control = NullControl(BasicPattern(TEMPLATE_SYSEX_PREFIX_BYTES))
+        self.template_callback = template_callback
 
     def matchEvent(self, event: FlMidiMsg) -> O[ControlEvent]:
         if not isMidiMsgSysex(event):
@@ -36,9 +37,7 @@ class ImpulseTemplateDumpMatcher(IControlMatcher):
 
         result = self._control.match(event)
         if result:
-            print("=" * 100)
-            print("HOORAY! WE GOT DUMPED! oh.")
-            print("=" * 100)
+            self.template_callback(event.sysex)
             return result
         return None
 

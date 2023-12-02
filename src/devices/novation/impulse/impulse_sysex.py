@@ -3,9 +3,22 @@ import device
 h = bytes.fromhex
 SYX_NOVATION_HEADER = h("F0 00 20 29")
 SYX_IMPULSE_HEADER = SYX_NOVATION_HEADER + h("67")
+
+# The "Automap" initialization message has these three "parameter" bytes.
+# Most scripts would set all three to 01.
+
+# After some fiddling, I've determined that setting the third byte to 00
+# allows the faders and encoders to be assigned individual "names".
+# When a control is tweaked, Impulse will automatically update its LCD to reflect this
+# name, or displays "No Ctrl" if none is assigned.
 SYX_MSG_INIT = SYX_IMPULSE_HEADER + h("06 01 01 00")
 SYX_MSG_DEINIT = SYX_IMPULSE_HEADER + h("06 00 00 00")
+
+# This is the "control annotation" message I discovered through monitoring
+# the USB traffic used by Automap. It behaves like writing into a text buffer,
+# as if we had a long LCD text display divided into sections.
 SYX_CONTROL_ANNOTATION = SYX_IMPULSE_HEADER + h("05")
+
 SYX_MSG_TEXT = SYX_IMPULSE_HEADER + h("08")
 SYX_MSG_TEXT2 = SYX_IMPULSE_HEADER + h("09")
 

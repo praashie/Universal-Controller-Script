@@ -1,3 +1,15 @@
+"""
+tests > device > novation > impulse > test_templates
+
+Tests for parsing and patching Novation Impulse SysEx template data.
+
+Authors:
+* Praash [praashie@gmail.com, Praash#0846]
+
+This code is licensed under the GPL v3 license. Refer to the LICENSE file for
+more details.
+"""
+
 import dataclasses
 import pytest
 
@@ -10,6 +22,10 @@ from devices.novation.impulse.templates import (
 
 h = bytes.fromhex
 
+# My personal template for use with FL Studio.
+# Drum pads are assigned to separate MIDI channels, just so that
+# we could get individual pad pressures as aftertouch data separately.
+# Additionally, the first fader button is assigned to mimic a sustain pedal
 SAMPLE_TEMPLATE = h(
     "F0 00 20 29 43 00 00 46 4C 53 74 75 64 69 6F 00 03 03 01 40 0B 00 24 3B 40 00 00 3C 60 40 01 00 24 54 40 10 04 24 54 40 10 04 09 15 7F 00 10 08 01 09 16 7F 00 10 08 01 09 17 7F 00 10 08 01 09 18 7F 00 10 08 01 09 19 7F 00 10 08 01 09 1A 7F 00 10 08 01 09 1B 7F 00 10 08 01 09 1C 7F 00 10 08 01 08 43 7F 00 08 08 01 08 45 7F 00 09 08 01 08 47 7F 00 0A 08 01 08 48 7F 00 0B 08 01 08 3C 7F 00 0C 08 01 08 3E 7F 00 0D 08 01 08 40 7F 00 0E 08 01 08 41 7F 00 0F 08 01 09 29 7F 00 0F 08 01 09 2A 7F 00 0F 08 01 09 2B 7F 00 0F 08 01 09 2C 7F 00 0F 08 01 09 2D 7F 00 0F 08 01 09 2E 7F 00 0F 08 01 09 2F 7F 00 0F 08 01 09 30 7F 00 0F 08 01 09 07 7F 00 0F 08 01 11 40 7F 00 02 08 01 11 42 7F 00 02 08 01 11 43 7F 00 02 08 01 11 36 7F 00 10 08 01 11 37 7F 00 10 08 01 11 38 7F 00 10 08 01 11 39 7D 00 10 08 01 11 3A 7F 00 10 08 01 11 3B 7F 00 10 08 01 09 01 7F 00 10 08 01 F7"
 )

@@ -38,22 +38,16 @@ from control_surfaces.managers import IValueManager
 from .util import ImpulseAnnotationValueManager, ImpulseEncoderValueStrategy, ImpulseFaderButtonManager, ImpulseFakeAnnotationManager
 
 
-def registerImpulseControls(matcher: BasicControlMatcher):
-    registerDrumpads(matcher)
-    registerMixerControls(matcher)
-    registerEncoders(matcher)
-    registerButtons(matcher)
-
-
-def registerDrumpads(matcher: BasicControlMatcher):
+def makeDrumpads() -> list[DrumPad]:
     # TODO: Documentation: Drum pads must be assigned to MIDI channel 16!
     # Default note layout starts from bottom left, C3 (60)
 
     drum_notes = [60, 62, 64, 65, 67, 69, 71, 72]
+    drum_pads = []
     for i, note in enumerate(drum_notes):
         coordinate = (1 - (i // 4), i % 4)
-        pad = makeDrumpadControl(note, coordinate)
-        matcher.addControl(pad)
+        drum_pads.append(makeDrumpadControl(note, coordinate))
+    return drum_pads
 
 
 def makeDrumpadControl(note: int, coordinate: tuple[int, int]) -> DrumPad:
@@ -64,7 +58,9 @@ def makeDrumpadControl(note: int, coordinate: tuple[int, int]) -> DrumPad:
     )
 
 
-def registerMixerControls(matcher: BasicControlMatcher):
+def makeMixerControls() -> tuple[list[Fader], list[GenericFaderButton]]:
+    faders = []
+    buttons = []
     for i in range(8):
         fader = ImpulseFader(
             control_class=Fader,
@@ -76,24 +72,29 @@ def registerMixerControls(matcher: BasicControlMatcher):
             track_index=i,
             coordinate=(0, i)
         )
-        matcher.addControl(fader)
-        matcher.addControl(button)
+        faders.append(fader)
+        buttons.append(button)
 
-    matcher.addControl(ImpulseFader(MasterFader, 8))
-    matcher.addControl(ImpulseFaderButton(MasterGenericFaderButton, 8))
+    faders.append(ImpulseFader(MasterFader, 8))
+    buttons.append(ImpulseFaderButton(MasterGenericFaderButton, 8))
+
+    return faders, buttons
 
 
-def registerEncoders(matcher: BasicControlMatcher):
+def makeEncoders() -> list[Encoder]:
+    encoders = []
     for i in range(8):
         encoder = ImpulseEncoder(
             control_class=Encoder,
             index=i,
             coordinate=(i // 4, i % 4)
         )
-        matcher.addControl(encoder)
+        encoders.append(encoder)
+    return encoders
 
 
-def registerButtons(matcher: BasicControlMatcher):
+def makeTransportButtons() -> list[TransportButton]:
+    buttons = []
     controlTypes: list[tuple[ type[TransportButton], int ]] = [
         (DirectionPrevious, 0x26),
         (DirectionNext, 0x25),
@@ -111,8 +112,9 @@ def registerButtons(matcher: BasicControlMatcher):
             value_strategy=Data2Strategy(),
         )
         button.isPress = impulse_button_isPress
-        matcher.addControl(button)
+        buttons.append(button)
 
+    return buttons
 
 
 def impulse_button_isPress(value: float):

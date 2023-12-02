@@ -46,7 +46,7 @@ import ui
 
 from . import controls
 from . import impulse_sysex
-from .templates import ImpulseTemplateDumpMatcher
+from .templates import ImpulseTemplateDumpMatcher, ImpulseTemplateData
 
 
 class Impulse49_61(Device):
@@ -57,7 +57,16 @@ class Impulse49_61(Device):
     def __init__(self):
         self.matcher = BasicControlMatcher()
 
-        controls.registerImpulseControls(self.matcher)
+        self.drum_pads = controls.makeDrumpads()
+        self.faders, self.fader_buttons = controls.makeMixerControls()
+        self.encoders = controls.makeEncoders()
+        self.transport_buttons = controls.makeTransportButtons()
+
+        for control_set in (
+            self.drum_pads, self.faders, self.fader_buttons,
+            self.encoders, self.transport_buttons
+        ):
+            self.matcher.addControls(control_set)
 
         self.matcher.addSubMatcher(NoteMatcher())
 
@@ -78,7 +87,7 @@ class Impulse49_61(Device):
             ])
         ))
 
-        self.matcher.addSubMatcher(ImpulseTemplateDumpMatcher())
+        self.matcher.addSubMatcher(ImpulseTemplateDumpMatcher(self.onTemplateDumped))
 
         super().__init__(self.matcher)
 
@@ -103,6 +112,11 @@ class Impulse49_61(Device):
 
     def deinitialize(self):
         log('device.impulse.init', 'Deinitialization message sent.')
+
+    def onTemplateDumped(self, sysex_data: bytes):
+        template = ImpulseTemplateData.parse(sysex_data)
+        log('device.impulse.template', 'Received template data:')
+        log('device.impulse.template', repr(template))
 
     @classmethod
     def create(
